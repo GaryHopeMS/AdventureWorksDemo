@@ -321,7 +321,7 @@ namespace modeling_demos
                     if (createNewId)
                     {
                         record.id = Guid.NewGuid();
-                        record.orderDate = DateTime.Today.ToShortDateString();
+                        record.orderDate = DateTime.Today;
                     }
                     if (expireInHour)
                     {
