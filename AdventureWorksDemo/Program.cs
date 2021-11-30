@@ -194,13 +194,17 @@ namespace modeling_demos
 
             Container goodCustomerContainer = goodDatabase.GetContainer("Customer");
             await Deployment.LoadContainerFromFile(
-                    goodCustomerContainer, folder + Path.DirectorySeparatorChar + "Customer",
-                    noBulk:true,createNewId:true,expireInHour:true);
+                    goodCustomerContainer, folder + Path.DirectorySeparatorChar + "txnonly"
+                    ,usebulk:false
+                    ,createNewId:true,expireInHour:true
+                    , maxDocs: 1000);
 
             Container badCustomerContainer = badDatabase.GetContainer("Customer");
             await Deployment.LoadContainerFromFile(
-                    badCustomerContainer, folder + Path.DirectorySeparatorChar + "Customer",
-                    noBulk: true, createNewId: true, expireInHour: true);
+                    badCustomerContainer, folder + Path.DirectorySeparatorChar + "txnonly"
+                    , usebulk: false
+                    , createNewId: true, expireInHour: true
+                    , maxDocs: 1000);
         }
 
             private static async Task UploadServerlessData()

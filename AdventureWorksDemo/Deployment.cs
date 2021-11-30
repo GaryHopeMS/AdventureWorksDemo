@@ -13,9 +13,9 @@ namespace modeling_demos
     class Deployment
     {
     
-        // private static readonly string gitdatapath = config["gitdatapath"];
-        private static string gitdatapath = "https://api.github.com/repos/MicrosoftDocs/mslearn-cosmosdb-modules-central/contents/data/fullset/";
-
+        // private static readonly string gitdatapath = config["gitdatapath"];"
+        //private static string gitdatapath = "https://api.github.com/repos/MicrosoftDocs/mslearn-cosmosdb-modules-central/contents/data/fullset/";
+        private static string gitdatapath = "https://api.github.com/repos/GaryHopeMS/AdventureWorksDemo/contents/AdventureWorksDemo/data/";
 
         public static async Task LoadDatabase(CosmosClient cosmosDBClient, bool force=false, int? schemaVersion=null)
         {
@@ -300,13 +300,13 @@ namespace modeling_demos
         }
 
         public static async Task LoadContainerFromFile(Container container, 
-                string file, Boolean noBulk = false,Boolean createNewId = false, Boolean expireInHour = false)
+                string file, Boolean usebulk = true,Boolean createNewId = false,
+                Boolean expireInHour = false, int maxDocs=0)
         {
             using (StreamReader streamReader = new StreamReader(file))
             {
 
                 int maxConcurrentTasks = 200;
-                bool usebulk = !noBulk;
 
                 string recordsJson = streamReader.ReadToEnd();
                 dynamic recordsArray = JsonConvert.DeserializeObject(recordsJson);
@@ -345,6 +345,12 @@ namespace modeling_demos
 
                         concurrentTasks.Clear();
                         batches++;
+                    }
+
+                    if (maxDocs > 0 && docCounter >= maxDocs)
+                    {
+                        Console.WriteLine($" short run maxDocs={maxDocs}");
+                        break;
                     }
 
                 }
