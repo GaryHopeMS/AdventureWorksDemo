@@ -35,19 +35,25 @@ namespace modeling_demos
             while (exit == false)
             {
                 Console.Clear();
+                Console.WriteLine($"Adventure Works ");
                 Console.WriteLine($"Cosmos DB Performance and Monitoring Demos");
-                Console.WriteLine($"-----------------------------------------");
+                Console.WriteLine($"-------------------------------------------------");
                 Console.WriteLine($"[a] Create Serverless databases and containers");
                 Console.WriteLine($"[b] Upload data to Serverless containers");
                 Console.WriteLine($"[v] Delete Serverless database");
-                Console.WriteLine($"-----------------------------------------");
+                Console.WriteLine($"-------------------------------------------------");
                 Console.WriteLine($"[c] Create Provisioned databases and containers");
                 Console.WriteLine($"[d] Upload data to Provisioned containers");
                 Console.WriteLine($"[w] Delete Provisioned databases");
-                Console.WriteLine($"-------------------------------------------");
-                Console.WriteLine($"[e] Continuious Sales Orders for Serverless");
+                Console.WriteLine($"-------------------------------------------------");
+                Console.WriteLine($"[e] Gernerate Sales Orders for Provisioned");
                 Console.WriteLine($"[f] Continuious Sales Orders for Provisioned");
-                Console.WriteLine($"-------------------------------------------");
+                Console.WriteLine($"------------------------------------------------ ");
+                Console.WriteLine($"[g] Get Customer details on login");
+                Console.WriteLine($"[h] Browse for product by Category");
+                Console.WriteLine($"[i] Place Order");
+                Console.WriteLine($"------------------------------------------------ ");
+
                 Console.WriteLine($"[x]   Exit");
 
                 ConsoleKeyInfo result = Console.ReadKey(true);
@@ -81,6 +87,11 @@ namespace modeling_demos
                 {
                     Console.Clear();
                     await UploadProvisionedData();
+                }
+                else if (result.KeyChar == 'e')
+                {
+                    Console.Clear();
+                    await GenerateSalesTransactionsData();
                 }
                 else if (result.KeyChar == 'x')
                 {
@@ -172,7 +183,27 @@ namespace modeling_demos
             await Deployment.LoadContainerFromFile(badCustomerContainer, folder + Path.DirectorySeparatorChar + "Customer");
         }
 
-        private static async Task UploadServerlessData()
+        private static async Task GenerateSalesTransactionsData()
+        {
+            Database goodDatabase = provisionedClient.GetDatabase("AdventureWorksGood");
+            Database badDatabase = provisionedClient.GetDatabase("AdventureWorksBad");
+
+            string sourceDatabaseName = "database-txnonly";
+            await Deployment.GetFilesFromRepo(sourceDatabaseName, true);
+            string folder = "data" + Path.DirectorySeparatorChar + sourceDatabaseName;
+
+            Container goodCustomerContainer = goodDatabase.GetContainer("Customer");
+            await Deployment.LoadContainerFromFile(
+                    goodCustomerContainer, folder + Path.DirectorySeparatorChar + "Customer",
+                    noBulk:true,createNewId:true,expireInHour:true);
+
+            Container badCustomerContainer = badDatabase.GetContainer("Customer");
+            await Deployment.LoadContainerFromFile(
+                    badCustomerContainer, folder + Path.DirectorySeparatorChar + "Customer",
+                    noBulk: true, createNewId: true, expireInHour: true);
+        }
+
+            private static async Task UploadServerlessData()
         {
             Database serverlessDatabase = serverlessClient.GetDatabase("AdventureWorks");
             string sourceDatabaseName = "database-v3";

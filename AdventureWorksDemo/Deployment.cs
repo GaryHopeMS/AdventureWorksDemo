@@ -300,7 +300,7 @@ namespace modeling_demos
         }
 
         public static async Task LoadContainerFromFile(Container container, 
-                string file, Boolean noBulk = false,Boolean createNewId = false)
+                string file, Boolean noBulk = false,Boolean createNewId = false, Boolean expireInHour = false)
         {
             using (StreamReader streamReader = new StreamReader(file))
             {
@@ -321,6 +321,11 @@ namespace modeling_demos
                     if (createNewId)
                     {
                         record.id = Guid.NewGuid();
+                        record.OrderDate = DateTime.Today.ToShortDateString();
+                    }
+                    if (expireInHour)
+                    {
+                        record.id = 3600;
                     }
                     if (usebulk)
                     {
