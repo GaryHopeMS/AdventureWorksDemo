@@ -354,8 +354,8 @@ namespace modeling_demos
                     }
 
                 }
-                Console.WriteLine($"    loaded  {file} - batch:{batches} - documents:{docCounter} of {totalDocs}");
                 await Task.WhenAll(concurrentTasks);
+                Console.WriteLine($"    loaded  {file} - batch:{batches} - documents:{docCounter} of {totalDocs}");
             }
         }
 
