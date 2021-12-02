@@ -46,8 +46,8 @@ namespace modeling_demos
                 Console.WriteLine($"[d] Upload data to Provisioned containers");
                 Console.WriteLine($"[w] Delete Provisioned databases");
                 Console.WriteLine($"-------------------------------------------------");
-                Console.WriteLine($"[e] Gernerate Sales Orders for Provisioned");
-                Console.WriteLine($"[f] Continuious Sales Orders for Provisioned");
+                Console.WriteLine($"[e] Gernerate Sales Orders for Provisioned (30 transactions a second)");
+                Console.WriteLine($"[f] Gernerate Sales Orders for Provisioned (200 transactions a second)");
                 Console.WriteLine($"------------------------------------------------ ");
                 Console.WriteLine($"[g] Get Customer details on login");
                 Console.WriteLine($"[h] Browse for product by Category");
@@ -92,6 +92,11 @@ namespace modeling_demos
                 {
                     Console.Clear();
                     await GenerateSalesTransactionsData();
+                }
+                else if (result.KeyChar == 'f')
+                {
+                    Console.Clear();
+                    await GenerateSalesTransactionsData(200);
                 }
                 else if (result.KeyChar == 'x')
                 {
@@ -183,7 +188,7 @@ namespace modeling_demos
             await Deployment.LoadContainerFromFile(badCustomerContainer, folder + Path.DirectorySeparatorChar + "Customer");
         }
 
-        private static async Task GenerateSalesTransactionsData()
+        private static async Task GenerateSalesTransactionsData(int maxConcurrentTasks=30)
         {
             Database goodDatabase = provisionedClient.GetDatabase("AdventureWorksGood");
             Database badDatabase = provisionedClient.GetDatabase("AdventureWorksBad");
@@ -193,18 +198,20 @@ namespace modeling_demos
             string folder = "data" + Path.DirectorySeparatorChar + sourceDatabaseName;
 
             Container goodCustomerContainer = goodDatabase.GetContainer("Customer");
-            await Deployment.LoadContainerFromFile(
+             Deployment.LoadContainerFromFile(
                     goodCustomerContainer, folder + Path.DirectorySeparatorChar + "txnonly"
-                    ,usebulk:false
-                    ,createNewId:true,expireInHour:true
-                    , maxDocs: 1000);
+                    , useBatches: true
+                    , createNewId: true, expireInHour: true
+                    //, maxDocs: 1000
+                    ,maxConcurrentTasks: maxConcurrentTasks, BatchSleep: 500);
 
             Container badCustomerContainer = badDatabase.GetContainer("Customer");
-            await Deployment.LoadContainerFromFile(
+             Deployment.LoadContainerFromFile(
                     badCustomerContainer, folder + Path.DirectorySeparatorChar + "txnonly"
-                    , usebulk: false
+                    , useBatches: true
                     , createNewId: true, expireInHour: true
-                    , maxDocs: 1000);
+                   // , maxDocs: 1000
+                    ,maxConcurrentTasks: maxConcurrentTasks, BatchSleep: 500);
         }
 
             private static async Task UploadServerlessData()

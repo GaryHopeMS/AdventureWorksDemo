@@ -6,6 +6,7 @@ using System.Threading;
 using System.Net.Http;
 using Newtonsoft.Json;
 using Microsoft.Azure.Cosmos;
+using models;
 
 
 namespace modeling_demos
@@ -299,14 +300,46 @@ namespace modeling_demos
 
         }
 
-        public static async Task LoadContainerFromFile(Container container, 
-                string file, Boolean usebulk = true,Boolean createNewId = false,
-                Boolean expireInHour = false, int maxDocs=0)
+        private static async Task<OperationResponse<T>> CaptureOperationResponse<T>(Task<ItemResponse<T>> task, T item)
+        {
+            try
+            {
+                ItemResponse<T> response = await task;
+                return new OperationResponse<T>()
+                {
+                    Item = item,
+                    IsSuccessful = true,
+                    RequestUnitsConsumed = task.Result.RequestCharge
+                };
+            }
+            catch (Exception ex)
+            {
+                if (ex is CosmosException cosmosException)
+                {
+                    return new OperationResponse<T>()
+                    {
+                        Item = item,
+                        RequestUnitsConsumed = cosmosException.RequestCharge,
+                        IsSuccessful = false,
+                        CosmosException = cosmosException
+                    };
+                }
+
+                return new OperationResponse<T>()
+                {
+                    Item = item,
+                    IsSuccessful = false,
+                    CosmosException = ex
+                };
+            }
+        }
+
+       public static async Task LoadContainerFromFile(Container container,
+                string file, Boolean useBatches = true, Boolean createNewId = false,
+                Boolean expireInHour = false, int maxDocs = 0, int maxConcurrentTasks = 200, int BatchSleep = 0)
         {
             using (StreamReader streamReader = new StreamReader(file))
             {
-
-                int maxConcurrentTasks = 200;
 
                 string recordsJson = streamReader.ReadToEnd();
                 dynamic recordsArray = JsonConvert.DeserializeObject(recordsJson);
@@ -314,21 +347,43 @@ namespace modeling_demos
                 int batches = 0;
                 int batchCounter = 0;
                 int docCounter = 0;
+                //List<Task<OperationResponse<dynamic>>> concurrentTasks = new List<Task<OperationResponse<dynamic>>>(maxConcurrentTasks);
                 List<Task> concurrentTasks = new List<Task>(maxConcurrentTasks);
+
                 int totalDocs = recordsArray.Count;
+                DateTime startTime = DateTime.Now;
+                DateTime endTime = DateTime.Now;
+
                 foreach (var record in recordsArray)
                 {
+
                     if (createNewId)
                     {
                         record.id = Guid.NewGuid();
-                        record.orderDate = DateTime.Today;
+                        record.marker = "test4";
+                        record.processed = DateTime.Now;
+
+                        if (record.type== "salesOrder")
+                        {
+                            record.customerId = Guid.NewGuid();
+                            record.orderDate = DateTime.Today;
+                        }
+
+                        if (record.type == "customer")
+                        {
+                            record.customerId = record.id;
+                            record.orderDate = DateTime.Today;
+                        }
                     }
+
                     if (expireInHour)
                     {
-                        record.id = 3600;
+                        record.ttl = 3600;
                     }
-                    if (usebulk)
+                    
+                    if (useBatches)
                     {
+                        // concurrentTasks.Add(CaptureOperationResponse(container.CreateItemAsync(record), record));
                         concurrentTasks.Add(container.CreateItemAsync(record));
                     }
                     else
@@ -338,13 +393,22 @@ namespace modeling_demos
                     batchCounter++;
                     if (batchCounter >= maxConcurrentTasks)
                     {
+                        endTime = DateTime.Now;
                         docCounter = docCounter + batchCounter;
                         batchCounter = 0;
                         await Task.WhenAll(concurrentTasks);
                         Console.WriteLine($"    loading {file} - batch:{batches} - documents:{docCounter} of {totalDocs}");
+                        Console.WriteLine($"        {container.Database.Id} - time taken {endTime.Subtract(startTime).TotalMilliseconds}");
+                        
+                       // var TotalRequestUnitsConsumed = concurrentTasks.Sum(task => task.Result.RequestUnitsConsumed);
+                       // var SuccessfulDocuments = concurrentTasks.Count(task => task.Result.IsSuccessful);
+                      //  Console.WriteLine($"    RU: {TotalRequestUnitsConsumed} Sucess: {SuccessfulDocuments}");
 
                         concurrentTasks.Clear();
                         batches++;
+                        Thread.Sleep(BatchSleep);
+                        startTime = DateTime.Now;
+
                     }
 
                     if (maxDocs > 0 && docCounter >= maxDocs)
