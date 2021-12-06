@@ -98,6 +98,21 @@ namespace modeling_demos
                     Console.Clear();
                     await GenerateSalesTransactionsData(200);
                 }
+                else if (result.KeyChar == 'g')
+                {
+                    Console.Clear();
+                    await QueryCustomer();
+                }
+                else if (result.KeyChar == 'h')
+                {
+                    Console.Clear();
+                    await QueryProduct();
+                }
+                else if (result.KeyChar == 'i')
+                {
+                    Console.Clear();
+                    await CreateNewOrder();
+                }
                 else if (result.KeyChar == 'x')
                 {
                     exit = true;
@@ -230,39 +245,105 @@ namespace modeling_demos
 
         public static async Task QueryCustomer()
         {
-            Database database = serverlessClient.GetDatabase("database-v2");
-            Container container = database.GetContainer("customer");
+            Database serverlessDatabase = serverlessClient.GetDatabase("AdventureWorks");
+            Container container = serverlessDatabase.GetContainer("Customer");
 
-            string customerId = "FFD0DD37-1F0E-4E2E-8FAC-EAF45B0E9447";
+            string emailAddress = "rebecca12@adventure-works.com";
 
             //Get a customer with a query
-            string sql = $"SELECT * FROM c WHERE c.id = @id";
-
-            FeedIterator<CustomerV2> resultSet = container.GetItemQueryIterator<CustomerV2>(
+            string sql = $"SELECT * FROM c WHERE c.emailAddress = @emailAddress";
+            FeedIterator<CustomerV4> resultSet = container.GetItemQueryIterator<CustomerV4>(
                 new QueryDefinition(sql)
-                .WithParameter("@id", customerId),
-                requestOptions: new QueryRequestOptions()
-                {
-                    PartitionKey = new PartitionKey(customerId)
-                });
+                .WithParameter("@emailAddress", emailAddress));
 
             Console.WriteLine("Query for a single customer\n");
             while (resultSet.HasMoreResults)
             {
-                FeedResponse<CustomerV2> response = await resultSet.ReadNextAsync();
-
-                foreach (CustomerV2 customer in response)
+                FeedResponse<CustomerV4> response = await resultSet.ReadNextAsync();
+                foreach (CustomerV4 customer in response)
                 {
                     Print(customer);
                 }
-
                 Console.WriteLine($"Customer Query Request Charge {response.RequestCharge}\n");
                 Console.WriteLine("Press any key to continue...");
                 Console.ReadKey();
             }
         }
 
-        public static async Task GetCustomer()
+        public static async Task QueryProduct()
+        {
+            Database serverlessDatabase = serverlessClient.GetDatabase("AdventureWorks");
+            Container container = serverlessDatabase.GetContainer("Product");
+
+            string categoryName = "Bikes, Touring Bikes";
+
+            //Get a list of product for category with a query
+            string sql = $"SELECT * FROM c WHERE c.categoryName = @categoryName";
+
+            FeedIterator<Product> resultSet = container.GetItemQueryIterator<Product>(
+                new QueryDefinition(sql)
+                .WithParameter("@categoryName", categoryName));
+
+            Console.WriteLine("Query for a list of product by category\n");
+            while (resultSet.HasMoreResults)
+            {
+                FeedResponse<Product> response = await resultSet.ReadNextAsync();
+
+                foreach (Product product in response)
+                {
+                    Print(product);
+                }
+                Console.WriteLine($"Product by category Query Request Charge {response.RequestCharge}\n");
+                Console.WriteLine("Press any key to continue...");
+                Console.ReadKey();
+            }
+        }
+
+        public static async Task CreateNewOrder()
+        {
+            Database database = serverlessClient.GetDatabase("AdventureWorks");
+            Container container = database.GetContainer("SalesOrder");
+
+            string customerId = "00182FAD-5C64-4A77-81C8-DEF1E41B18A0";
+            
+            //Create a new order
+            string orderId = Guid.NewGuid().ToString();
+
+            SalesOrder salesOrder = new SalesOrder
+            {
+                id = orderId,
+                type = "salesOrder",
+                customerId = customerId,
+                orderDate = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                shipDate = "",
+                details = new List<SalesOrderDetails>
+                {
+                    new SalesOrderDetails
+                    {
+                        sku = "FR-M94B-38",
+                        name = "HL Mountain Frame - Black, 38",
+                        price = 1349.6,
+                        quantity = 1
+                    },
+                    new SalesOrderDetails
+                    {
+                        sku = "SO-R809-M",
+                        name = "Racing Socks, M",
+                        price = 8.99,
+                        quantity = 2
+                    }
+                }
+            };
+
+            Response<SalesOrder> response = await container.CreateItemAsync<SalesOrder>(
+                    salesOrder, new PartitionKey(salesOrder.customerId)
+                );
+            Console.WriteLine($"Order created successfully, Request Charge = {response.RequestCharge}\n");
+            Console.WriteLine("Press any key to continue...");
+            Console.ReadKey();
+        }
+
+         public static async Task GetCustomer()
         {
             Database database = serverlessClient.GetDatabase("database-v2");
             Container container = database.GetContainer("customer");
